@@ -135,7 +135,6 @@ def test_viewer_cannot_download_unpermitted_document():
     )
     assert response.status_code in (403, 404)
 
-
 def test_viewer_cannot_download_another_users_document():
     owner_registration = register_user(
         "idor_owner", "idor_owner@example.com"
@@ -182,3 +181,79 @@ def test_viewer_cannot_download_another_users_document():
     )
 
     assert download_response.status_code in (403, 404)
+
+def test_revoked_permission_blocks_download():
+    # Create a document owner and a viewer
+    assert register_user(
+        "revoke_owner", "revoke_owner@example.com"
+    ).status_code == 201
+
+    assert register_user(
+        "revoke_viewer", "revoke_viewer@example.com"
+    ).status_code == 201
+
+    owner_token = login_user("revoke_owner")
+    viewer_token = login_user("revoke_viewer")
+
+    owner_headers = {
+        "Authorization": f"Bearer {owner_token}"
+    }
+    viewer_headers = {
+        "Authorization": f"Bearer {viewer_token}"
+    }
+
+    # Promote the owner using the test admin
+    admin_token = login_user("test_admin", "TestAdminPass123!")
+    admin_headers = {
+        "Authorization": f"Bearer {admin_token}"
+    }
+
+    role_response = client.post(
+        "/admin/users/role",
+        headers=admin_headers,
+        json={"username": "revoke_owner", "role": "owner"},
+    )
+    assert role_response.status_code == 200, role_response.text
+
+    # Upload a private document
+    upload_response = client.post(
+        "/documents/upload",
+        headers=owner_headers,
+        data={
+            "name": "Revocation Test",
+            "category": "test",
+            "owner_id": "1",
+        },
+        files={"file": ("revoke_test.txt", b"private test content", "text/plain")},
+    )
+    assert upload_response.status_code == 201, upload_response.text
+    document_id = upload_response.json()["document_id"]
+
+    # Grant read permission to the viewer
+    grant_response = client.post(
+        f"/documents/{document_id}/permissions",
+        headers=owner_headers,
+        json={"username": "revoke_viewer", "access_level": "read"},
+    )
+    assert grant_response.status_code == 200, grant_response.text
+
+    # Confirm the viewer can download before revocation
+    before_revoke = client.get(
+        f"/documents/{document_id}/download",
+        headers=viewer_headers,
+    )
+    assert before_revoke.status_code == 200, before_revoke.text
+
+    # Revoke permission
+    revoke_response = client.delete(
+        f"/documents/{document_id}/permissions/revoke_viewer",
+        headers=owner_headers,
+    )
+    assert revoke_response.status_code == 200, revoke_response.text
+
+    # Confirm access is denied after revocation
+    after_revoke = client.get(
+        f"/documents/{document_id}/download",
+        headers=viewer_headers,
+    )
+    assert after_revoke.status_code in (403, 404), after_revoke.text  

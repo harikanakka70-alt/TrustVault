@@ -145,3 +145,13 @@ The following work remains to be completed and verified before submission:
 9. Update this log with actual results, including failures and their fixes.
 
 Do not mark an item complete until its implementation and evidence have been checked.
+ 
+## 11. Permission Revocation Security Test — 21 October 2026
+
+- **Goal:** Verify that revoking a viewer's document permission stops further access.
+- **Test added:** `test revoked permission blocks download`
+- **Test flow:** Create an owner and viewer, upload a private document, grant read access, verify the viewer can download it, revoke permission, and verify that the viewer is denied afterward.
+- **Issue caught and fixed:** The first test run failed with an IndentationError because the new function was indented inside the preceding test. I corrected the function indentation and reran the suite.
+- **Verification:** All 10 tests passed, with 2 FastAPI deprecation warnings.
+- **Security lesson:** Permission revocation must be enforced by the server on subsequent requests, not merely hidden in the user interface.
+

@@ -238,7 +238,7 @@ The following status reflects the automated tests currently implemented in `back
 
 | T3: Unauthorized permission changes | No dedicated cross-owner permission-change test yet. | Not yet tested |
 
-| T4: Revoked access | No dedicated grant, revoke, and retry test yet. | Not yet tested |
+| T4: Revoked access | test revoked permission blocks download verifies that a viewer can download a document before revocation and is denied after revocation. | Tested — passed |
 
 | T5: Password exposure or account compromise | Short-password rejection is tested. Password-storage inspection and explicit invalid-login testing remain outstanding. | Partially tested |
 
