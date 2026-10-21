@@ -212,3 +212,67 @@ TrustVault stores confidential documents such as salary letters, customer contra
 
 A mitigation is not considered verified merely because it is documented. Each verification step must be executed against the implementation, and its actual result must be recorded. Any unresolved threat must be reported honestly before submission.
 
+
+
+\## 6. Current Verification Status
+
+
+
+\*\*Last test run:\*\* 21 October 2026  
+
+\*\*Automated test result:\*\* 9 passed, 0 failed.
+
+
+
+The following status reflects the automated tests currently implemented in `backend/test\_main.py`. A passing test verifies only the specific behavior it exercises; it does not prove that an entire threat category is fully mitigated.
+
+
+
+| Threat | Current evidence | Status |
+
+|---|---|---|
+
+| T1: IDOR | Test checks that a viewer cannot download another user's private document. | Partially tested |
+
+| T2: Privilege escalation | Tests reject a viewer's attempt to change a role and upload a document. | Partially tested |
+
+| T3: Unauthorized permission changes | No dedicated cross-owner permission-change test yet. | Not yet tested |
+
+| T4: Revoked access | No dedicated grant, revoke, and retry test yet. | Not yet tested |
+
+| T5: Password exposure or account compromise | Short-password rejection is tested. Password-storage inspection and explicit invalid-login testing remain outstanding. | Partially tested |
+
+| T6: Forged or expired tokens | Invalid-token and expired-token rejection are tested. Missing-token behavior and other token claims need additional verification. | Partially tested |
+
+| T7: Malicious or oversized uploads | No dedicated file-type, file-size, or path-traversal tests yet. | Not yet tested |
+
+| T8: Audit log tampering or missing events | No dedicated audit-event completeness or tampering tests yet. | Not yet tested |
+
+| T9: Sensitive data leakage | No systematic response, log, storage, or repository leakage review has been completed. | Not yet tested |
+
+| T10: Database or file loss | Persistence and recovery have not yet been verified through a restart or recovery test. | Not yet tested |
+
+
+
+\### Next Verification Work
+
+
+
+1\. Add tests for permission changes, immediate permission revocation, and unauthorized document operations.
+
+2\. Add upload validation tests for prohibited file types, oversized files, and unsafe filenames.
+
+3\. Verify that audit logs record sensitive operations and denied attempts.
+
+4\. Inspect password storage, authentication responses, and error responses for sensitive-data exposure.
+
+5\. Verify persistence and recovery using the actual database and file-storage configuration.
+
+6\. Re-run the test suite after each change, record the actual results, and update this section only when new evidence supports a status change.
+
+
+
+A threat marked "Not yet tested" is not necessarily exploitable; it means the current test evidence is insufficient to claim that the threat has been addressed.
+
+
+
