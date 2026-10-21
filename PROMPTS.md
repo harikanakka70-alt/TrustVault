@@ -2,382 +2,244 @@
 
 ## Purpose
 
-This log records how AI assistance was used to develop TrustVault, including tasks, errors encountered, corrections, verification evidence, and remaining security work. The entries distinguish observed results from features that still need testing.
+This file documents how AI assistance was used during the development of TrustVault, the issues identified, the corrections made, and the evidence used to verify the changes.
+
+AI-generated suggestions were treated as proposals rather than automatically trusted solutions. I checked relevant code, API responses, test results, and error messages before accepting corrections.
+
+This log distinguishes between:
+- **Observed:** directly seen in code, terminal output, API responses, or test results.
+- **Verified:** checked through a recorded test or reproducible manual action.
+- **Remaining:** not yet fully verified or completed.
 
 ## 1. Python Environment and Backend Setup
 
-**Task:** Set up the Python environment, install dependencies, and run the FastAPI backend.
+**Task:** Set up the Python environment and run the FastAPI backend on Windows.
 
-**AI assistance:** Requested step-by-step guidance for virtual environments, dependency installation, and starting the server.
+**Issues encountered:**
+- The virtual environment was created in the project root while the backend code was inside the `backend` directory.
+- Activating the environment was affected by PowerShell execution-policy restrictions.
+- Required packages were initially missing, including SQLAlchemy and Uvicorn.
 
-**Problem encountered:** The virtual environment was located in the project root rather than inside the backend folder. PowerShell activation and missing dependencies also caused setup difficulties.
+**Correction and verification:**
+- Used the project virtual environment's Python executable directly when activation was inconvenient.
+- Installed the required backend dependencies.
+- Started the FastAPI application and accessed the local Swagger UI at `http://127.0.0.1:8000/docs`.
 
-**Correction:** Located the existing environment and used its Python executable directly. Installed the required packages and used the existing environment to run commands.
+**Lesson learned:** Python commands must use the intended virtual environment, and the server must run from the correct project directory with the required dependencies installed.
 
-**Evidence:** The backend started successfully, and the automated test suite was later run using the same virtual environment.
+## 2. SQLAlchemy Model Declaration Error
 
-**Lesson:** Understand the active Python environment before installing packages or diagnosing import errors.
+**Task:** Define the database models for users, documents, and permissions.
 
-## 2. SQLAlchemy Model Configuration
+**Issue encountered:** SQLAlchemy raised an error because a model used `_tablename_` instead of the required `__tablename__` attribute.
 
-**Task:** Define database models for users, documents, and permissions.
+**Correction:** Changed the model declarations to use `__tablename__` and checked that the models could be loaded by the application.
 
-**Problem encountered:** An earlier model definition used `_tablename_` instead of SQLAlchemy's required `__tablename__` attribute, resulting in a model configuration error.
+**Security relevance:** Incorrect model definitions can prevent the application from starting and can interfere with database-backed authorization features.
 
-**Correction:** Identified the incorrect attribute and corrected the table-name declaration.
+## 3. Authentication and Role-Based Access Control
 
-**Verification still required:** Review the database schema, relationships, constraints, and permission enforcement against the assignment requirements.
+**Task:** Implement authentication and distinguish administrators, document owners, and viewers.
 
-**Lesson:** An apparently small naming error can prevent the application from initializing. Model changes should be verified by running the application and relevant tests.
+**Implementation and verification work:**
+- Added registration and login endpoints.
+- Used password hashing rather than storing plaintext passwords.
+- Implemented bearer-token authentication with JWT expiration.
+- Restricted user-role changes to administrators.
+- Restricted document uploads to administrators and owners.
+- Added automated tests for forged tokens, expired tokens, short passwords, and unauthorized role changes.
 
-## 3. Authentication and Authorization
+**Observed results:** Automated tests confirmed that a viewer was denied access to role-changing and document-upload operations, and that forged and expired tokens were rejected.
 
-**Task:** Implement registration, login, JWT authentication, and role-based access.
+**Security considerations:** A successful login alone does not prove that every protected endpoint correctly enforces authentication and authorization. Missing-token behavior, invalid credentials, password-hash verification, and token-claim validation should be checked against the current implementation and test suite.
 
-**AI assistance:** Used guided troubleshooting to understand protected endpoints and test authentication and authorization behavior.
+**Secret handling:** The JWT signing key must be supplied through the `TRUSTVAULT_SECRET_KEY` environment variable. A real secret must not be committed to the repository or included in this log.
 
-**Security issue considered:** New accounts default to the viewer role. A viewer must not be able to assign themselves an owner or admin role or upload documents without authorization.
+## 4. Document Ownership and Insecure Direct Object Reference (IDOR)
 
-**Correction and evidence:** Automated tests now verify that a viewer's attempt to change a role is rejected and that a viewer's upload attempt is rejected. The test suite also checks invalid and expired authentication tokens.
+**Threat:** A user may change a document ID in a URL or API request to access another user's confidential document.
 
-**Observed result:** These tests passed in the test run recorded on 21 October 2026.
+**Task:** Test document access across different users.
 
-**Remaining verification:** Test missing tokens, invalid login credentials, password hashing, token claims, and additional authorization edge cases.
+**Issues encountered:**
+- An initial upload attempt used a viewer account and was correctly rejected because viewers cannot upload documents.
+- The test setup needed an appropriately authorized owner account.
+- The initial test expected the wrong response status and used `id` instead of the actual response field `document_id`.
 
-## 4. Document Access and IDOR Testing
+**Correction:** Updated the test to use the appropriate authorized test account and the actual API response field and status code.
 
-**Task:** Verify that a user cannot access another user's private document by changing its document ID.
+**Verification:** Added or corrected automated tests for unauthorized downloads and document-access restrictions. The latest recorded automated run completed with 17 passed, 0 failed, and 2 warnings.
 
-**Initial problem:** The first test attempted to upload a document as a newly registered viewer. The API correctly returned `403 Forbidden`, because only owners and admins can upload documents.
+**Security relevance:** Authorization must be checked on the server for each requested document. Hiding document IDs or relying on the user interface is not sufficient protection.
 
-**Correction:** Configured a test-only admin account, promoted the test document owner through the admin role-management endpoint, and retried the upload with the owner's token.
+## 5. Syntax Errors and Test Corrections
 
-**Second problem:** The upload endpoint returned `201 Created`, while the test expected `200`. The response used the field `document_id`, not `id`.
+**Task:** Correct Python and test-file errors encountered during development.
 
-**Correction:** Updated the test to expect `201` and read the returned `document_id`.
+**Issues encountered:** Incorrect indentation, misplaced Markdown code fences, and test-code mistakes caused errors during execution.
 
-**Observed result:** The revised test passed. It creates a private document and checks that a different viewer cannot download it. The suite also checks a request for a nonexistent document ID.
+**Correction:** Checked the relevant file structure, corrected indentation and syntax, and reran the tests after changes.
 
-**Limitation:** These tests cover specific download scenarios. They do not yet prove that every document read, edit, delete, and permission-management endpoint prevents IDOR.
+**Lesson learned:** Error messages should be used to identify the failing location. After correcting code, rerun the relevant test rather than assuming the change worked.
 
-**Lesson:** Tests must reflect the actual API contract, and successful upload alone does not prove that document authorization is secure.
+Historical test counts below describe earlier development stages. They should not be interpreted as the current result.
 
-## 5. Test Syntax and Test Setup Corrections
+## 6. Git and Version Control
 
-**Task:** Maintain a reliable automated security test suite.
+**Task:** Track project changes in Git and push work to GitHub.
 
-**Problems encountered:** Copying code into the Python file introduced Markdown code fences and incorrect indentation. These caused syntax and test-collection errors.
+**Observed evidence:** A commit with the message `Fix document access security tests` was recorded as commit `3033954`. Later changes were also pushed to the repository's `master` branch.
 
-**Correction:** Removed the Markdown markers, corrected the indentation, and reran pytest.
+**Correction and practice:**
+- Commit meaningful changes during development.
+- Review the staged changes before committing.
+- Check `.gitignore` and avoid committing `.env` files, signing keys, passwords, uploaded confidential documents, and other sensitive data.
+- Keep the repository private when required by the assignment instructions.
 
-**Observed result:** The final recorded run completed with **9 passed, 0 failed, and 2 warnings**. The warnings concerned FastAPI's deprecated `on_event` startup mechanism; they were not test failures.
+**Lesson learned:** Commit history provides evidence of development progress and corrections. A successful push does not, by itself, prove that the application is secure or deployed.
 
-**Lesson:** Code copied from documentation must be placed into source files without Markdown formatting. A test suite must be executed after edits rather than assumed to be valid.
+## 7. Threat Modeling and Security Review
 
-## 6. Git and GitHub
+The following threats were considered during development:
 
-**Task:** Preserve the project history and commit development progress.
+| Threat | Relevant defense or verification |
+|---|---|
+| IDOR / cross-user document access | Server-side document ownership and permission checks; unauthorized-access tests |
+| Privilege escalation | Role restrictions and tests for viewer access to administrative operations |
+| Forged or expired tokens | JWT validation and authentication tests |
+| Unauthorized upload | Role-based upload restriction and automated test |
+| Permission abuse | Ownership checks for permission changes |
+| Revoked access remaining usable | Test that a revoked viewer can no longer download the document |
+| Read-only permission used to edit | Automated test for edit denial |
+| Unauthorized edit or deletion | Automated tests for non-owner edit and delete attempts |
+| Unsafe filename or path manipulation | Filename handling and safe-path checks in the implementation |
+| Oversized upload | File-size limit in the upload implementation |
+| Missing audit evidence | Tests for selected audit events and administrator-only audit-log access |
+| Exposure of signing keys | Environment-based secret configuration and repository hygiene |
 
-**AI assistance:** Used step-by-step Git guidance to check status, stage changes, commit, and push to the remote repository.
+**Important limitation:** These defenses cover selected threats, not every possible attack. A threat should be marked fully verified only when the relevant implementation and a reproducible test or manual check provide evidence.
 
-**Observed result:** Commit `3033954` (`Fix document access security tests`) was successfully pushed to the `master` branch on 21 October 2026.
+## 8. Latest Automated Test Evidence
 
-**Security consideration:** Keep the repository private as required by the assignment instructions. Review `.gitignore` and repository contents to ensure that secrets, local databases, uploaded confidential files, and virtual-environment files are not committed.
+**Test date:** 21 October 2026
 
-## 7. Threat Modeling
+**Observed result:** The latest recorded automated test run completed with **17 passed, 0 failed, and 2 warnings**.
 
-**Task:** Create `THREATS.md` to identify realistic risks to confidential documents and describe mitigations and verification steps.
+The two warnings concerned FastAPI's deprecated `on_event` startup mechanism. They were warnings, not test failures.
 
-**AI assistance:** Used AI to organize threats involving IDOR, privilege escalation, unauthorized permission changes, revoked access, password exposure, forged or expired tokens, malicious uploads, audit-log gaps, sensitive-data leakage, and data loss.
+The recorded test suite covered:
 
-**Critical limitation:** A mitigation written in documentation is not proof that it is implemented. Threats must be linked to actual tests, code review, or operational evidence.
+1. Health endpoint.
+2. Home endpoint.
+3. Rejection of short passwords.
+4. Rejection of forged tokens.
+5. Denial of role changes by viewers.
+6. Denial of document uploads by viewers.
+7. Rejection of expired tokens.
+8. Denial of downloads without permission.
+9. Denial of downloads for another user's document.
+10. Denial of downloads after permission revocation.
+11. Denial of permission grants by non-owners.
+12. Denial of unauthorized document edits.
+13. Denial of unauthorized document deletions.
+14. Denial of editing with read-only permission.
+15. Administrator access to audit logs.
+16. Denial of audit-log access to viewers.
+17. Recording of document uploads in the audit log.
 
-**Correction:** Added a verification-status section to distinguish partially tested threats from those without dedicated tests.
+**Interpretation:** These results provide evidence for the listed scenarios. They do not establish that every assignment requirement, edge case, or security threat has been fully tested.
 
-**Remaining work:** Add and execute tests for permission revocation, unauthorized permission changes, file validation, audit events, sensitive-data leakage, and persistence.
+## 9. Permission Revocation
 
-## 8. Current Automated Test Evidence
+**Threat:** A viewer may continue accessing a document after the owner revokes permission.
 
-**Date:** 21 October 2026
+**Task:** Verify that revoked access is denied.
 
-**Command used:**
+**Test scenario:**
+1. Create a document as an authorized owner.
+2. Grant a viewer read permission.
+3. Confirm that the viewer can download the permitted document.
+4. Revoke the viewer's permission.
+5. Attempt the download again using the viewer's credentials.
+6. Confirm that the request is denied.
 
-`D:\model\TrustVault\.venv\Scripts\python.exe -m pytest test_main.py -v`
+**Observed result:** The automated test `test_revoked_permission_blocks_download` passed in the latest recorded test run.
 
-**Observed result:** 9 passed, 0 failed, 2 warnings.
+**Security relevance:** Revocation must be enforced by the backend on subsequent requests, not just reflected in the user interface.
 
-The passing tests cover:
+## 10. Unauthorized Permission Changes
 
-- Health endpoint.
-- Home endpoint.
-- Short-password rejection.
-- Forged-token rejection.
-- Viewer role-change rejection.
-- Viewer upload rejection.
-- Expired-token rejection.
-- Rejection of a download request for a nonexistent document.
-- Rejection of another viewer's attempt to download a private document.
+**Threat:** A user who does not own a document may try to grant another user access.
 
-**Scope limitation:** Passing these nine tests does not establish that all assignment requirements or all threats have been verified.
+**Task:** Test authorization for permission changes.
 
-## 9. Lessons Learned
+**Issue encountered:** An initial test supplied an `owner_id` value even though the server determines ownership from the authenticated user.
 
-- AI-generated code and security recommendations must be independently checked.
-- Authentication and authorization are different: a logged-in user is not automatically authorized to access every document.
-- Tests must check both permitted and denied operations.
-- API status codes and response fields should be verified against actual responses.
-- Secrets and confidential data must not be committed to source control.
-- Test results should be recorded only after running the tests.
-- Unfinished functionality and unresolved security risks must be reported honestly.
+**Correction:** Updated the test setup to use the authenticated owner and rely on the server-side ownership model.
 
-## 10. Outstanding Work
+**Observed result:** The automated test `test_non_owner_cannot_grant_document_permission` passed in the latest recorded test run.
 
-The following work remains to be completed and verified before submission:
+**Security relevance:** The backend must not trust a client-supplied owner ID to establish authority over a document.
 
-1. Map every assignment requirement to an implemented feature and a verification test.
-2. Test permission granting, permission revocation, and immediate denial after revocation.
-3. Test unauthorized document edits, deletions, and permission changes.
-4. Test allowed file types, file-size limits, and unsafe filenames.
-5. Verify audit events for sensitive operations and denied attempts.
-6. Review password storage, API errors, logs, and repository contents for sensitive-data exposure.
-7. Verify database and document persistence and recovery.
-8. Deploy the application and test the deployed service, including authorization, in a separate browser session.
-9. Update this log with actual results, including failures and their fixes.
+## 11. Additional Document Authorization Tests
 
-Do not mark an item complete until its implementation and evidence have been checked.
- 
-## 11. Permission Revocation Security Test — 21 October 2026
+**Task:** Extend coverage for editing, deleting, and read-only access.
 
-- **Goal:** Verify that revoking a viewer's document permission stops further access.
-- **Test added:** `test revoked permission blocks download`
-- **Test flow:** Create an owner and viewer, upload a private document, grant read access, verify the viewer can download it, revoke permission, and verify that the viewer is denied afterward.
-- **Issue caught and fixed:** The first test run failed with an IndentationError because the new function was indented inside the preceding test. I corrected the function indentation and reran the suite.
-- **Verification:** All 10 tests passed, with 2 FastAPI deprecation warnings.
-- **Security lesson:** Permission revocation must be enforced by the server on subsequent requests, not merely hidden in the user interface.
+**Corrections made:**
+- Corrected the upload-response field used by the tests.
+- Corrected a misspelled variable in the test code.
+- Checked that a non-owner cannot edit another user's document.
+- Checked that a non-owner cannot delete another user's document.
+- Checked that read permission alone does not allow editing.
 
+**Observed result:** The three relevant authorization tests were included in the latest recorded test run, which completed with 17 passed and 0 failed.
 
-## Unauthorized Permission Change Test — 21 October 2026
-
-- **Threat addressed:** T3 — Unauthorized permission changes.
-- **Test added:** `test_non_owner_cannot_grant_document_permission`.
-- **Test scenario:** A different document owner attempts to grant access to another owner's document.
-- **Expected security behavior:** The server rejects the request with HTTP 403 Forbidden.
-- **Result:** The test passed.
-- **Issue caught and fixed:** The initial test included a hardcoded `owner_id` in the upload form. Reviewing `main.py` showed that the server assigns ownership from the authenticated user (`owner_id=user.id`), so the unnecessary field was removed.
-- **Verification:** The full test suite reported 11 passed, 0 failed, and 2 FastAPI deprecation warnings.
-- **Lesson:** Security tests should reflect the actual server-side ownership model and test the authorization boundary directly.
-
-### 2026-10-21 — Additional document authorization tests
-
-**Goal:** Strengthen tests for unauthorized document edits and deletions, and for read-only permissions.
-
-**AI assistance:** Used AI to draft three automated security tests.
-
-**Human verification and correction:** Ran the test suite and found that the new tests expected the upload response field `id`. Inspected `main.py` and identified the actual field as `document_id`. Corrected the test references, then fixed a spelling error (`dociment_id`) found in the final test.
-
-**Result:** All 14 tests passed after the corrections.
-
-**Remaining work:** Test upload validation, audit events (including denied attempts), and date-based administrator document search.
-
-# TrustVault — AI Usage and Correction Log
-
-## Purpose
-
-This log records how AI assistance was used to develop TrustVault, including tasks, errors encountered, corrections, verification evidence, and remaining security work. The entries distinguish observed results from features that still need testing.
-
-## 1. Python Environment and Backend Setup
-
-**Task:** Set up the Python environment, install dependencies, and run the FastAPI backend.
-
-**AI assistance:** Requested step-by-step guidance for virtual environments, dependency installation, and starting the server.
-
-**Problem encountered:** The virtual environment was located in the project root rather than inside the backend folder. PowerShell activation and missing dependencies also caused setup difficulties.
-
-**Correction:** Located the existing environment and used its Python executable directly. Installed the required packages and used the existing environment to run commands.
-
-**Evidence:** The backend started successfully, and the automated test suite was later run using the same virtual environment.
-
-**Lesson:** Understand the active Python environment before installing packages or diagnosing import errors.
-
-## 2. SQLAlchemy Model Configuration
-
-**Task:** Define database models for users, documents, and permissions.
-
-**Problem encountered:** An earlier model definition used `_tablename_` instead of SQLAlchemy's required `__tablename__` attribute, resulting in a model configuration error.
-
-**Correction:** Identified the incorrect attribute and corrected the table-name declaration.
-
-**Verification still required:** Review the database schema, relationships, constraints, and permission enforcement against the assignment requirements.
-
-**Lesson:** An apparently small naming error can prevent the application from initializing. Model changes should be verified by running the application and relevant tests.
-
-## 3. Authentication and Authorization
-
-**Task:** Implement registration, login, JWT authentication, and role-based access.
-
-**AI assistance:** Used guided troubleshooting to understand protected endpoints and test authentication and authorization behavior.
-
-**Security issue considered:** New accounts default to the viewer role. A viewer must not be able to assign themselves an owner or admin role or upload documents without authorization.
-
-**Correction and evidence:** Automated tests now verify that a viewer's attempt to change a role is rejected and that a viewer's upload attempt is rejected. The test suite also checks invalid and expired authentication tokens.
-
-**Observed result:** These tests passed in the test run recorded on 21 October 2026.
-
-**Remaining verification:** Test missing tokens, invalid login credentials, password hashing, token claims, and additional authorization edge cases.
-
-## 4. Document Access and IDOR Testing
-
-**Task:** Verify that a user cannot access another user's private document by changing its document ID.
-
-**Initial problem:** The first test attempted to upload a document as a newly registered viewer. The API correctly returned `403 Forbidden`, because only owners and admins can upload documents.
-
-**Correction:** Configured a test-only admin account, promoted the test document owner through the admin role-management endpoint, and retried the upload with the owner's token.
-
-**Second problem:** The upload endpoint returned `201 Created`, while the test expected `200`. The response used the field `document_id`, not `id`.
-
-**Correction:** Updated the test to expect `201` and read the returned `document_id`.
-
-**Observed result:** The revised test passed. It creates a private document and checks that a different viewer cannot download it. The suite also checks a request for a nonexistent document ID.
-
-**Limitation:** These tests cover specific download scenarios. They do not yet prove that every document read, edit, delete, and permission-management endpoint prevents IDOR.
-
-**Lesson:** Tests must reflect the actual API contract, and successful upload alone does not prove that document authorization is secure.
-
-## 5. Test Syntax and Test Setup Corrections
-
-**Task:** Maintain a reliable automated security test suite.
-
-**Problems encountered:** Copying code into the Python file introduced Markdown code fences and incorrect indentation. These caused syntax and test-collection errors.
-
-**Correction:** Removed the Markdown markers, corrected the indentation, and reran pytest.
-
-**Observed result:** The final recorded run completed with **9 passed, 0 failed, and 2 warnings**. The warnings concerned FastAPI's deprecated `on_event` startup mechanism; they were not test failures.
-
-**Lesson:** Code copied from documentation must be placed into source files without Markdown formatting. A test suite must be executed after edits rather than assumed to be valid.
-
-## 6. Git and GitHub
-
-**Task:** Preserve the project history and commit development progress.
-
-**AI assistance:** Used step-by-step Git guidance to check status, stage changes, commit, and push to the remote repository.
-
-**Observed result:** Commit `3033954` (`Fix document access security tests`) was successfully pushed to the `master` branch on 21 October 2026.
-
-**Security consideration:** Keep the repository private as required by the assignment instructions. Review `.gitignore` and repository contents to ensure that secrets, local databases, uploaded confidential files, and virtual-environment files are not committed.
-
-## 7. Threat Modeling
-
-**Task:** Create `THREATS.md` to identify realistic risks to confidential documents and describe mitigations and verification steps.
-
-**AI assistance:** Used AI to organize threats involving IDOR, privilege escalation, unauthorized permission changes, revoked access, password exposure, forged or expired tokens, malicious uploads, audit-log gaps, sensitive-data leakage, and data loss.
-
-**Critical limitation:** A mitigation written in documentation is not proof that it is implemented. Threats must be linked to actual tests, code review, or operational evidence.
-
-**Correction:** Added a verification-status section to distinguish partially tested threats from those without dedicated tests.
-
-**Remaining work:** Add and execute tests for permission revocation, unauthorized permission changes, file validation, audit events, sensitive-data leakage, and persistence.
-
-## 8. Current Automated Test Evidence
-
-**Date:** 21 October 2026
-
-**Command used:**
-
-`D:\model\TrustVault\.venv\Scripts\python.exe -m pytest test_main.py -v`
-
-**Observed result:** 9 passed, 0 failed, 2 warnings.
-
-The passing tests cover:
-
-- Health endpoint.
-- Home endpoint.
-- Short-password rejection.
-- Forged-token rejection.
-- Viewer role-change rejection.
-- Viewer upload rejection.
-- Expired-token rejection.
-- Rejection of a download request for a nonexistent document.
-- Rejection of another viewer's attempt to download a private document.
-
-**Scope limitation:** Passing these nine tests does not establish that all assignment requirements or all threats have been verified.
-
-## 9. Lessons Learned
-
-- AI-generated code and security recommendations must be independently checked.
-- Authentication and authorization are different: a logged-in user is not automatically authorized to access every document.
-- Tests must check both permitted and denied operations.
-- API status codes and response fields should be verified against actual responses.
-- Secrets and confidential data must not be committed to source control.
-- Test results should be recorded only after running the tests.
-- Unfinished functionality and unresolved security risks must be reported honestly.
-
-## 10. Outstanding Work
-
-The following work remains to be completed and verified before submission:
-
-1. Map every assignment requirement to an implemented feature and a verification test.
-2. Test permission granting, permission revocation, and immediate denial after revocation.
-3. Test unauthorized document edits, deletions, and permission changes.
-4. Test allowed file types, file-size limits, and unsafe filenames.
-5. Verify audit events for sensitive operations and denied attempts.
-6. Review password storage, API errors, logs, and repository contents for sensitive-data exposure.
-7. Verify database and document persistence and recovery.
-8. Deploy the application and test the deployed service, including authorization, in a separate browser session.
-9. Update this log with actual results, including failures and their fixes.
-
-Do not mark an item complete until its implementation and evidence have been checked.
- 
-## 11. Permission Revocation Security Test — 21 October 2026
-
-- **Goal:** Verify that revoking a viewer's document permission stops further access.
-- **Test added:** `test revoked permission blocks download`
-- **Test flow:** Create an owner and viewer, upload a private document, grant read access, verify the viewer can download it, revoke permission, and verify that the viewer is denied afterward.
-- **Issue caught and fixed:** The first test run failed with an IndentationError because the new function was indented inside the preceding test. I corrected the function indentation and reran the suite.
-- **Verification:** All 10 tests passed, with 2 FastAPI deprecation warnings.
-- **Security lesson:** Permission revocation must be enforced by the server on subsequent requests, not merely hidden in the user interface.
-
-
-## Unauthorized Permission Change Test — 21 October 2026
-
-- **Threat addressed:** T3 — Unauthorized permission changes.
-- **Test added:** `test_non_owner_cannot_grant_document_permission`.
-- **Test scenario:** A different document owner attempts to grant access to another owner's document.
-- **Expected security behavior:** The server rejects the request with HTTP 403 Forbidden.
-- **Result:** The test passed.
-- **Issue caught and fixed:** The initial test included a hardcoded `owner_id` in the upload form. Reviewing `main.py` showed that the server assigns ownership from the authenticated user (`owner_id=user.id`), so the unnecessary field was removed.
-- **Verification:** The full test suite reported 11 passed, 0 failed, and 2 FastAPI deprecation warnings.
-- **Lesson:** Security tests should reflect the actual server-side ownership model and test the authorization boundary directly.
-
+**Security relevance:** Read access and edit access are different privileges. The backend must enforce the required permission level for each operation.
 
 ## 12. AI-Assisted Security Code Review — 21 October 2026
 
-**Goal:** Review document authorization, permission management, and audit logging before finalizing the threat model.
+**Task:** Review the document-authorization and audit-related code paths for potential security weaknesses.
 
-**Prompt/task:** Review the existing `check_document_access()` helper and document endpoints to identify potential authorization weaknesses. Compare the implementation against the security threats in `THREATS.md`.
+**Areas reviewed:**
+- The document-access helper.
+- Document listing and filtering.
+- Document updates and downloads.
+- Document deletion.
+- Permission granting and revocation.
+- Administrator audit-log access.
 
-**Code inspected:**
-- `check_document_access()`
-- `GET /documents`
-- `PUT /documents/{document_id}`
-- `GET /documents/{document_id}/download`
-- `DELETE /documents/{document_id}`
-- `POST /documents/{document_id}/permissions`
-- `DELETE /documents/{document_id}/permissions/{username}`
-- `GET /admin/audit-logs`
+**Review approach:** AI-assisted review was used to identify areas requiring attention. Findings were treated as items to inspect, not as proof that a vulnerability existed or had been fixed.
 
-**Findings:** The reviewed code includes read/edit permission checks, owner/admin restrictions for permission management, an additional owner/admin check for deletion, and audit logging calls for several sensitive operations.
+**Verification approach:** Relevant implementation details and existing automated tests were checked. The latest recorded suite passed, but it does not cover every possible attack or every branch of every endpoint.
 
-**Security limitations identified:**
-- Every protected endpoint must be checked to confirm authorization is consistently enforced.
-- Immediate permission revocation needs to be verified through subsequent requests.
-- Audit-event completeness and failure handling require dedicated tests.
-- File-upload validation and safe file-path handling need further review.
+**Remaining considerations:** Continue checking denied-access audit events, permission edge cases, file-path handling, upload failure cleanup, persistence, and the remaining assignment requirements. Do not claim that a check passed unless it was actually performed.
 
-**Correction to approach:** Do not assume that a security control is effective solely because a helper function or audit call exists. Map each threat to the relevant code and verify it with a reproducible test.
+## 13. Lessons Learned
 
-**Verification status:** Code-review observations recorded. No new automated test result is claimed by this section.
+- AI-generated code and explanations must be checked against the actual application.
+- Error messages, API responses, and automated tests provide concrete evidence for corrections.
+- Authorization must be enforced by the backend for every protected operation.
+- Document ownership must come from authenticated server-side identity, not a trusted client-supplied identifier.
+- Read and edit permissions must be distinguished.
+- Permission revocation must affect subsequent access attempts.
+- Secrets must be managed outside committed source code.
+- Passing tests provide evidence for the tested scenarios, not a guarantee of complete security.
+- Git commits document changes but do not replace testing or security review.
 
-**Next action:** Compare the actual test functions with the threats, run the missing security tests, and record their real outputs and any fixes.
+## 14. Remaining Work and Verification Limits
 
+The following items should be marked complete only after they have been checked against the current implementation and assignment requirements:
 
+1. Verify that every required role and document-management operation works as specified.
+2. Review permission granting, revocation, and immediate denial after revocation; retain the existing automated tests and investigate any remaining untested cases.
+3. Review authorization for document edits, deletions, and permission changes, including edge cases not covered by current tests.
+4. Verify file-size limits, unsafe-filename handling, and path containment. Do not claim that file-extension restrictions are implemented unless the code enforces them and the assignment requires them.
+5. Check audit coverage for uploads, downloads, edits, deletions, permission changes, and denied access attempts.
+6. Verify administrator search and filtering by the required fields, including date filters.
+7. Check database and uploaded-file persistence across application restarts.
+8. Verify that sensitive values and confidential uploaded files are excluded from Git commits.
+9. Verify deployment and test the deployed application independently if deployment is required.
+10. Review the threat model against the actual code and automated tests, and record any gaps honestly.
+
+**Final status:** The latest recorded automated run provides evidence that 17 tests passed with no failures. Deployment status, complete requirement coverage, and complete threat coverage must be assessed separately.
 
