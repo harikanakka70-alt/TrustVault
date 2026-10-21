@@ -224,7 +224,11 @@ A mitigation is not considered verified merely because it is documented. Each ve
 
 \*\*Last test run:\*\* 21 October 2026  
 
-\*\*Automated test result:\*\* 9 passed, 0 failed.
+\*\*Latest automated test result:\*\* 17 passed, 0 failed, 2 warnings on 21 October 2026.
+
+
+
+The test suite verifies specific behaviors only. Passing tests do not establish that all threats are fully mitigated. The verification table below records the evidence currently available and must be updated when additional tests or manual checks are completed..
 
 
 
