@@ -256,4 +256,70 @@ def test_revoked_permission_blocks_download():
         f"/documents/{document_id}/download",
         headers=viewer_headers,
     )
-    assert after_revoke.status_code in (403, 404), after_revoke.text  
+    assert after_revoke.status_code in (403, 404), after_revoke.text 
+
+def test_non_owner_cannot_grant_document_permission():
+    # Register two users
+    assert register_user(
+        "t3_owner", "t3_owner@example.com"
+    ).status_code == 201
+
+    assert register_user(
+        "t3_other", "t3_other@example.com"
+    ).status_code == 201
+
+    owner_token = login_user("t3_owner")
+    other_token = login_user("t3_other")
+    admin_token = login_user("test_admin", "TestAdminPass123!")
+
+    admin_headers = {
+        "Authorization": f"Bearer {admin_token}"
+    }
+    owner_headers = {
+        "Authorization": f"Bearer {owner_token}"
+    }
+    other_headers = {
+        "Authorization": f"Bearer {other_token}"
+    }
+
+    # Promote the document owner and the other user
+    for username, role in [
+        ("t3_owner", "owner"),
+        ("t3_other", "owner"),
+    ]:
+        response = client.post(
+            "/admin/users/role",
+            headers=admin_headers,
+            json={"username": username, "role": role},
+        )
+        assert response.status_code == 200, response.text
+
+    # The owner uploads a private document
+    upload = client.post(
+        "/documents/upload",
+        headers=owner_headers,
+        data={
+            "name": "T3 Permission Test",
+            "category": "test",
+        },
+        files={
+            "file": (
+                "t3_test.txt",
+                b"private test content",
+                "text/plain",
+            )
+        },
+    )
+    assert upload.status_code == 201, upload.text
+    document_id = upload.json()["document_id"]
+
+    # Another owner must not grant access to this document
+    response = client.post(
+        f"/documents/{document_id}/permissions",
+        headers=other_headers,
+        json={
+            "username": "t3_owner",
+            "access_level": "read",
+        },
+    )
+    assert response.status_code == 403, response.text

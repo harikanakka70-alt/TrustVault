@@ -70,11 +70,15 @@ TrustVault stores confidential documents such as salary letters, customer contra
 
 
 
-\*\*Mitigation:\*\* Authorize permission creation, modification, and revocation on the server. Only authorized users may change document permissions.
+\*\*Mitigation:\*\* Authorize permission creation, modification, and revocation on the server. Only the document owner or an authorized administrator may change document permissions.
 
 
 
-\*\*Verification:\*\* Attempt to change permissions for a document owned by another user and verify the operation is denied.
+\*\*Verification:\*\* test\_non\_owner\_cannot\_grant\_document\_permission passed. The test attempts to grant access to a document owned by another user and verifies that the server denies the operation with HTTP 403 (Forbidden).
+
+
+
+\*\*Verification status:\*\* Tested — passed. The test confirms that a non-owner cannot grant permissions on another user's document. Unauthorized revocation should be tested separately.
 
 
 

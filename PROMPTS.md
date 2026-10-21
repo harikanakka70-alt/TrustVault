@@ -155,3 +155,15 @@ Do not mark an item complete until its implementation and evidence have been che
 - **Verification:** All 10 tests passed, with 2 FastAPI deprecation warnings.
 - **Security lesson:** Permission revocation must be enforced by the server on subsequent requests, not merely hidden in the user interface.
 
+
+## Unauthorized Permission Change Test — 21 October 2026
+
+- **Threat addressed:** T3 — Unauthorized permission changes.
+- **Test added:** `test_non_owner_cannot_grant_document_permission`.
+- **Test scenario:** A different document owner attempts to grant access to another owner's document.
+- **Expected security behavior:** The server rejects the request with HTTP 403 Forbidden.
+- **Result:** The test passed.
+- **Issue caught and fixed:** The initial test included a hardcoded `owner_id` in the upload form. Reviewing `main.py` showed that the server assigns ownership from the authenticated user (`owner_id=user.id`), so the unnecessary field was removed.
+- **Verification:** The full test suite reported 11 passed, 0 failed, and 2 FastAPI deprecation warnings.
+- **Lesson:** Security tests should reflect the actual server-side ownership model and test the authorization boundary directly.
+
