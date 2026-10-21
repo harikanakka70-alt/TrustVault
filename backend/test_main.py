@@ -1,23 +1,46 @@
-
 import os
 import tempfile
 from pathlib import Path
 import jwt
 from datetime import datetime, timedelta, timezone
 
-# Use a separate database for automated tests.
 test_db = Path(tempfile.gettempdir()) / "trustvault_test.db"
 test_db.unlink(missing_ok=True)
 
 os.environ["DATABASE_URL"] = f"sqlite:///{test_db.as_posix()}"
-os.environ["TRUSTVAULT_SECRET_KEY"] = (
-    "test-only-secret-for-automated-tests"
-)
+os.environ["TRUSTVAULT_SECRET_KEY"] = "test-only-secret-for-automated-tests"
+os.environ["TRUSTVAULT_ADMIN_USERNAME"] = "test_admin"
+os.environ["TRUSTVAULT_ADMIN_EMAIL"] = "test_admin@example.com"
+os.environ["TRUSTVAULT_ADMIN_PASSWORD"] = "TestAdminPass123!"
 
 from fastapi.testclient import TestClient
-from main import app
+from main import app, create_bootstrap_admin
 
 client = TestClient(app)
+create_bootstrap_admin()
+
+
+def register_user(username, email):
+    return client.post(
+        "/register",
+        json={
+            "username": username,
+            "email": email,
+            "password": "StrongTestPass123!",
+        },
+    )
+
+
+def login_user(username, password="StrongTestPass123!"):
+    response = client.post(
+        "/login",
+        json={
+            "username": username,
+            "password": password,
+        },
+    )
+    assert response.status_code == 200, response.text
+    return response.json()["access_token"]
 
 
 def test_health_endpoint():
@@ -52,26 +75,11 @@ def test_forged_token_rejected():
 
 
 def test_viewer_cannot_change_user_role():
-    register_response = client.post(
-        "/register",
-        json={
-            "username": "viewer_test",
-            "email": "viewer_test@example.com",
-            "password": "StrongTestPass123!",
-        },
-    )
-    assert register_response.status_code == 201
+    assert register_user(
+        "viewer_test", "viewer_test@example.com"
+    ).status_code == 201
 
-    login_response = client.post(
-        "/login",
-        json={
-            "username": "viewer_test",
-            "password": "StrongTestPass123!",
-        },
-    )
-    assert login_response.status_code == 200
-
-    token = login_response.json()["access_token"]
+    token = login_user("viewer_test")
 
     response = client.post(
         "/admin/users/role",
@@ -82,34 +90,17 @@ def test_viewer_cannot_change_user_role():
 
 
 def test_viewer_cannot_upload_document():
-    register_response = client.post(
-        "/register",
-        json={
-            "username": "upload_viewer",
-            "email": "upload_viewer@example.com",
-            "password": "StrongTestPass123!",
-        },
-    )
-    assert register_response.status_code == 201
+    assert register_user(
+        "upload_viewer", "upload_viewer@example.com"
+    ).status_code == 201
 
-    login_response = client.post(
-        "/login",
-        json={
-            "username": "upload_viewer",
-            "password": "StrongTestPass123!",
-        },
-    )
-    assert login_response.status_code == 200
-
-    token = login_response.json()["access_token"]
+    token = login_user("upload_viewer")
 
     response = client.post(
         "/documents/upload",
         headers={"Authorization": f"Bearer {token}"},
         data={"name": "test.txt", "category": "test"},
-        files={
-            "file": ("test.txt", b"test content", "text/plain")
-        },
+        files={"file": ("test.txt", b"test content", "text/plain")},
     )
     assert response.status_code == 403
 
@@ -132,29 +123,62 @@ def test_expired_token_rejected():
 
 
 def test_viewer_cannot_download_unpermitted_document():
-    register_response = client.post(
-        "/register",
-        json={
-            "username": "idor_viewer",
-            "email": "idor_viewer@example.com",
-            "password": "StrongTestPass123!",
-        },
-    )
-    assert register_response.status_code == 201
+    assert register_user(
+        "idor_viewer", "idor_viewer@example.com"
+    ).status_code == 201
 
-    login_response = client.post(
-        "/login",
-        json={
-            "username": "idor_viewer",
-            "password": "StrongTestPass123!",
-        },
-    )
-    assert login_response.status_code == 200
-
-    token = login_response.json()["access_token"]
+    token = login_user("idor_viewer")
 
     response = client.get(
         "/documents/999999/download",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code in (403, 404)
+
+
+def test_viewer_cannot_download_another_users_document():
+    owner_registration = register_user(
+        "idor_owner", "idor_owner@example.com"
+    )
+    assert owner_registration.status_code == 201
+
+    viewer_registration = register_user(
+        "idor_other", "idor_other@example.com"
+    )
+    assert viewer_registration.status_code == 201
+
+    # Log in as the configured test admin and promote the document owner.
+    admin_token = login_user("test_admin", "TestAdminPass123!")
+
+    role_response = client.post(
+        "/admin/users/role",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={"username": "idor_owner", "role": "owner"},
+    )
+    assert role_response.status_code == 200, role_response.text
+
+    owner_token = login_user("idor_owner")
+    viewer_token = login_user("idor_other")
+
+    upload_response = client.post(
+        "/documents/upload",
+        headers={"Authorization": f"Bearer {owner_token}"},
+        data={"name": "private_test.txt", "category": "test"},
+        files={
+            "file": (
+                "private_test.txt",
+                b"private test content",
+                "text/plain",
+            )
+        },
+    )
+
+    assert upload_response.status_code == 201, upload_response.text
+    document_id = upload_response.json()["document_id"]
+
+    download_response = client.get(
+        f"/documents/{document_id}/download",
+        headers={"Authorization": f"Bearer {viewer_token}"},
+    )
+
+    assert download_response.status_code in (403, 404)
