@@ -589,6 +589,7 @@ def revoke_permission(
 
 # ---------- Admin document search and audit log ----------
 
+
 @app.get("/admin/documents")
 def admin_search_documents(
     search: str = Query(default=""),

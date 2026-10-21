@@ -224,7 +224,7 @@ def test_revoked_permission_blocks_download():
             "category": "test",
             "owner_id": "1",
         },
-        files={"file": ("revoke_test.txt", b"private test content", "text/plain")},
+        files={"file": ("revoke_test.txt", b"private test content","text/plain")},
     )
     assert upload_response.status_code == 201, upload_response.text
     document_id = upload_response.json()["document_id"]
@@ -323,3 +323,238 @@ def test_non_owner_cannot_grant_document_permission():
         },
     )
     assert response.status_code == 403, response.text
+
+
+
+def test_non_owner_cannot_edit_another_users_document():
+    assert register_user(
+        "edit_owner", "edit_owner@example.com"
+    ).status_code == 201
+    assert register_user(
+        "edit_attacker", "edit_attacker@example.com"
+    ).status_code == 201
+
+    admin_token = login_user("test_admin", "TestAdminPass123!")
+    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+
+    promote = client.post(
+        "/admin/users/role",
+        headers=admin_headers,
+        json={"username": "edit_owner", "role": "owner"},
+    )
+    assert promote.status_code == 200, promote.text
+
+    owner_token = login_user("edit_owner")
+    attacker_token = login_user("edit_attacker")
+
+    upload = client.post(
+        "/documents/upload",
+        headers={"Authorization": f"Bearer {owner_token}"},
+        data={"name": "Private Edit Test", "category": "test"},
+        files={"file": ("private_edit.txt", b"private content", "text/plain")},
+    )
+    assert upload.status_code == 201, upload.text
+    document_id = upload.json()["document_id"]
+
+    response = client.put(
+        f"/documents/{document_id}",
+        headers={"Authorization": f"Bearer {attacker_token}"},
+        json={"name": "Hacked Name", "category": "changed"},
+    )
+    assert response.status_code == 403, response.text
+
+
+def test_non_owner_cannot_delete_another_users_document():
+    assert register_user(
+        "delete_owner", "delete_owner@example.com"
+    ).status_code == 201
+    assert register_user(
+        "delete_attacker", "delete_attacker@example.com"
+    ).status_code == 201
+
+    admin_token = login_user("test_admin", "TestAdminPass123!")
+    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+
+    promote = client.post(
+        "/admin/users/role",
+        headers=admin_headers,
+        json={"username": "delete_owner", "role": "owner"},
+    )
+    assert promote.status_code == 200, promote.text
+
+    owner_token = login_user("delete_owner")
+    attacker_token = login_user("delete_attacker")
+
+    upload = client.post(
+        "/documents/upload",
+        headers={"Authorization": f"Bearer {owner_token}"},
+        data={"name": "Private Delete Test", "category": "test"},
+        files={"file": ("private_delete.txt", b"private content", "text/plain")},
+    )
+    assert upload.status_code == 201, upload.text
+    document_id = upload.json()["document_id"]
+
+    response = client.delete(
+        f"/documents/{document_id}",
+        headers={"Authorization": f"Bearer {attacker_token}"},
+    )
+    assert response.status_code == 403, response.text
+
+    # Verify the document still exists and its owner can still download it.
+    owner_download = client.get(
+        f"/documents/{document_id}/download",
+        headers={"Authorization": f"Bearer {owner_token}"},
+    )
+    assert owner_download.status_code == 200, owner_download.text
+
+
+def test_read_permission_cannot_edit_document():
+    assert register_user(
+        "readonly_owner", "readonly_owner@example.com"
+    ).status_code == 201
+    assert register_user(
+        "readonly_user", "readonly_user@example.com"
+    ).status_code == 201
+
+    admin_token = login_user("test_admin", "TestAdminPass123!")
+    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+
+    promote = client.post(
+        "/admin/users/role",
+        headers=admin_headers,
+        json={"username": "readonly_owner", "role": "owner"},
+    )
+    assert promote.status_code == 200, promote.text
+
+    owner_token = login_user("readonly_owner")
+    readonly_token = login_user("readonly_user")
+
+    owner_headers = {"Authorization": f"Bearer {owner_token}"}
+    readonly_headers = {"Authorization": f"Bearer {readonly_token}"}
+
+    upload = client.post(
+        "/documents/upload",
+        headers=owner_headers,
+        data={"name": "Read Only Test", "category": "test"},
+        files={"file": ("readonly.txt", b"original content", "text/plain")},
+    )
+    assert upload.status_code == 201, upload.text
+    document_id = upload.json()["document_id"]
+
+    grant = client.post(
+        f"/documents/{document_id}/permissions",
+        headers=owner_headers,
+        json={"username": "readonly_user", "access_level": "read"},
+    )
+    assert grant.status_code == 200, grant.text
+
+    # Read permission should allow downloading.
+    download = client.get(
+        f"/documents/{document_id}/download",
+        headers=readonly_headers,
+    )
+    assert download.status_code == 200, download.text
+
+    # But read permission must not allow editing.
+    edit = client.put(
+        f"/documents/{document_id}",
+        headers=readonly_headers,
+        json={"name": "Unauthorized Change", "category": "changed"},
+    )
+    assert edit.status_code == 403, edit.text
+
+
+
+def test_admin_can_view_audit_logs():
+    admin_token = login_user(
+        "test_admin", "TestAdminPass123!"
+    )
+
+    response = client.get(
+        "/admin/audit-logs",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+
+    assert response.status_code == 200, response.text
+    assert isinstance(response.json(), list)
+
+
+def test_viewer_cannot_view_audit_logs():
+    assert register_user(
+        "audit_viewer", "audit_viewer@example.com"
+    ).status_code == 201
+
+    viewer_token = login_user("audit_viewer")
+
+    response = client.get(
+        "/admin/audit-logs",
+        headers={"Authorization": f"Bearer {viewer_token}"},
+    )
+
+    assert response.status_code == 403, response.text
+
+
+
+
+def test_document_upload_is_recorded_in_audit_log():
+    assert register_user(
+        "audit_upload_owner", "audit_upload_owner@example.com"
+    ).status_code == 201
+
+    admin_token = login_user("test_admin", "TestAdminPass123!")
+    admin_headers = {
+        "Authorization": f"Bearer {admin_token}"
+    }
+
+    promote = client.post(
+        "/admin/users/role",
+        headers=admin_headers,
+        json={
+            "username": "audit_upload_owner",
+            "role": "owner",
+        },
+    )
+    assert promote.status_code == 200, promote.text
+
+    owner_token = login_user("audit_upload_owner")
+    owner_headers = {
+        "Authorization": f"Bearer {owner_token}"
+    }
+
+    upload = client.post(
+        "/documents/upload",
+        headers=owner_headers,
+        data={
+            "name": "Audit Evidence Test",
+            "category": "test",
+        },
+        files={
+            "file": (
+                "audit_evidence.txt",
+                b"audit test content",
+                "text/plain",
+            )
+        },
+    )
+    assert upload.status_code == 201, upload.text
+
+    document_id = upload.json()["document_id"]
+
+    logs_response = client.get(
+        "/admin/audit-logs",
+        headers=admin_headers,
+    )
+    assert logs_response.status_code == 200, logs_response.text
+
+    matching_logs = [
+        log for log in logs_response.json()
+        if log["action"] == "upload"
+        and log["document_id"] == document_id
+    ]
+
+    assert matching_logs, (
+        f"No upload audit event found for document {document_id}"
+    )
+
+
+
