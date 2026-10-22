@@ -17,7 +17,8 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from database import engine, Base, get_db
-import models
+import models 
+from fastapi.middleware.cors import CORSMiddleware
 
 
 # ---------- Configuration ----------
@@ -25,6 +26,13 @@ import models
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="TrustVault", version="1.0.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 password_hash = PasswordHash.recommended()
 security = HTTPBearer()
 
