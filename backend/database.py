@@ -9,6 +9,20 @@ DATABASE_URL = os.getenv(
     "sqlite:///./trustvault.db"
 )
 
+# Normalize Render's PostgreSQL URL for the psycopg driver.
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace(
+        "postgres://",
+        "postgresql+psycopg://",
+        1
+    )
+elif DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace(
+        "postgresql://",
+        "postgresql+psycopg://",
+        1
+    )
+
 if DATABASE_URL.startswith("sqlite"):
     engine = create_engine(
         DATABASE_URL,
