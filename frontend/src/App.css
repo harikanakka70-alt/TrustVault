@@ -1,0 +1,296 @@
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+:root {
+    font-family: 'DM Sans', sans-serif;
+    color: #172033;
+    background: #f4f7fb;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-optical-sizing: auto;
+    font-weight: 400;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-width: 320px;
+    min-height: 100vh;
+}
+
+button, a {
+    font: inherit;
+}
+
+    button:focus-visible, a:focus-visible {
+        outline: 3px solid #8caaff;
+        outline-offset: 4px;
+    }
+
+.app {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: radial-gradient(ellipse at 50% 25%, #ffffff 0%, transparent 65%), #f4f7fb;
+}
+
+.topbar {
+    min-height: 78px;
+    padding: 0 7%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #e7ebf2;
+    background: rgba(255, 255, 255, 0.8);
+}
+
+.brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 11px;
+    color: #172033;
+    text-decoration: none;
+    font-family: 'Manrope', sans-serif;
+    font-weight: 800;
+    font-size: 21px;
+    letter-spacing: -0.7px;
+}
+
+.brand-icon {
+    display: grid;
+    place-items: center;
+    width: 37px;
+    height: 37px;
+    color: white;
+    background: #3158d8;
+    border-radius: 12px;
+    box-shadow: 0 5px 12px #3158d833;
+}
+
+.security-label {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: #657087;
+    font-size: 13px;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    background: #23a575;
+    border-radius: 50%;
+}
+
+.role-screen, .dashboard {
+    width: min(100% - 36px, 620px);
+    margin: auto;
+    padding: 64px 0 72px;
+    text-align: center;
+}
+
+.eyebrow {
+    color: #3158d8;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+}
+
+h1 {
+    margin: 14px 0 12px;
+    font-family: 'Manrope', sans-serif;
+    font-size: clamp(30px, 5vw, 43px);
+    font-weight: 800;
+    letter-spacing: -1.7px;
+    line-height: 1.15;
+}
+
+.subtitle {
+    max-width: 510px;
+    margin: 0 auto;
+    color: #68748a;
+    font-size: 15px;
+    line-height: 1.8;
+}
+
+.role-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 34px;
+    text-align: left;
+}
+
+.role-card {
+    width: 100%;
+    min-height: 108px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 22px;
+    color: #172033;
+    text-align: left;
+    background: #fff;
+    border: 1px solid #e5eaf3;
+    border-radius: 17px;
+    box-shadow: 0 5px 18px #1e315008;
+    cursor: pointer;
+    transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+    .role-card:hover {
+        transform: translateY(-2px);
+        border-color: #b7c7fa;
+        box-shadow: 0 12px 28px #263e7712;
+    }
+
+.role-icon {
+    flex: 0 0 54px;
+    width: 54px;
+    height: 54px;
+    display: grid;
+    place-items: center;
+    background: #edf2ff;
+    border-radius: 15px;
+    font-size: 25px;
+}
+
+.role-copy {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 6px;
+}
+
+    .role-copy strong {
+        font-family: 'Manrope', sans-serif;
+        font-size: 16px;
+        font-weight: 800;
+    }
+
+    .role-copy > span {
+        color: #748096;
+        font-size: 13px;
+        line-height: 1.6;
+    }
+
+.role-arrow {
+    color: #3158d8;
+    font-size: 24px;
+}
+
+.footnote {
+    margin-top: 23px;
+    color: #8791a4;
+    font-size: 12px;
+    line-height: 1.7;
+}
+
+.back-button {
+    display: block;
+    margin-bottom: 38px;
+    padding: 10px 14px;
+    color: #4e5b73;
+    background: white;
+    border: 1px solid #e2e7f0;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+    .back-button:hover {
+        color: #3158d8;
+        border-color: #b7c7fa;
+    }
+
+.dashboard-icon {
+    margin-bottom: 18px;
+    font-size: 44px;
+}
+
+.notice {
+    margin-top: 30px;
+    padding: 22px;
+    text-align: left;
+    background: white;
+    border: 1px solid #e2e8f4;
+    border-radius: 15px;
+    line-height: 1.7;
+}
+
+    .notice strong {
+        font-size: 14px;
+    }
+
+    .notice p {
+        margin-bottom: 0;
+        color: #68748a;
+        font-size: 13px;
+    }
+
+.primary-button {
+    margin-top: 20px;
+    padding: 13px 19px;
+    color: white;
+    background: #3158d8;
+    border: 0;
+    border-radius: 11px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+    .primary-button:hover {
+        background: #2447bd;
+    }
+
+footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    padding: 22px 7%;
+    color: #8a94a6;
+    border-top: 1px solid #e7ebf2;
+    font-size: 12px;
+}
+
+@media (max-width: 520px) {
+    .topbar {
+        min-height: 68px;
+        padding: 0 18px;
+    }
+
+    .brand {
+        font-size: 18px;
+    }
+
+    .security-label {
+        max-width: 135px;
+        font-size: 11px;
+    }
+
+    .role-screen, .dashboard {
+        padding-top: 48px;
+        padding-bottom: 48px;
+    }
+
+    .role-card {
+        gap: 12px;
+        padding: 16px;
+    }
+
+    .role-icon {
+        flex-basis: 46px;
+        width: 46px;
+        height: 46px;
+    }
+
+    footer {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+}
