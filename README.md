@@ -6,7 +6,7 @@ TrustVault is a secure document management web application designed to protect c
 
 The application provides authentication, role-based access control, document management, fine-grained permissions, and audit logging. Users can access only the documents and operations authorized for their roles and individual permissions.
 
-**Important:** This is an existing project. Improve and extend the current implementation instead of recreating the application from scratch.
+
 
 ## 2. Technology Stack
 
@@ -30,7 +30,7 @@ The application provides authentication, role-based access control, document man
 - GitHub for source control
 - Render for hosting the frontend and backend
 
-Use the dependencies and configuration already present in the repository. Do not replace the existing technology stack without a clear reason.
+
 
 ## 3. User Roles
 
@@ -55,7 +55,6 @@ Use the dependencies and configuration already present in the repository. Do not
 - Must never gain access by changing a document ID or URL.
 
 ## 4. Core Functional Requirements
-
 1. Authentication with secure password hashing and JWT-based sessions.
 2. Role-based authorization for Admin, Owner, and Viewer.
 3. Document upload with file validation and metadata.
@@ -67,10 +66,9 @@ Use the dependencies and configuration already present in the repository. Do not
 9. Audit logging for uploads, downloads, edits, deletions, permission changes, and denied access attempts.
 10. Administrative document search and audit-log visibility.
 
-Treat these requirements as acceptance criteria. Verify the existing implementation before claiming that any feature is complete.
+
 
 ## 5. Security Requirements
-
 Security is a primary requirement, not an optional enhancement.
 
 - Never trust a user ID, owner ID, role, or permission supplied by the frontend without server-side verification.
@@ -89,7 +87,6 @@ Security is a primary requirement, not an optional enhancement.
 - Use secure production configuration for database connections, file storage, and authentication.
 
 ## 6. Frontend Requirements
-
 Improve the existing React frontend to provide a professional, responsive interface.
 
 The application should include, where supported by the backend:
@@ -110,8 +107,7 @@ The application should include, where supported by the backend:
 Frontend controls are not a security boundary. All permissions must also be enforced by the backend.
 
 ## 7. Backend API
-
-Inspect the existing FastAPI routes before adding or modifying endpoints. The existing API includes routes for:
+The existing API includes routes for:
 
 - `/`
 - `/health`
@@ -127,12 +123,9 @@ Inspect the existing FastAPI routes before adding or modifying endpoints. The ex
 - `/admin/documents`
 - `/admin/audit-logs`
 
-Confirm the actual HTTP methods, request schemas, response schemas, and authorization rules from the source code.
 
-Keep the frontend API calls consistent with the backend. Avoid duplicate endpoints or breaking existing API contracts.
 
 ## 8. Instructions for GitHub Copilot
-
 Before making changes:
 
 1. Inspect the root directory and the `backend` and `frontend` folders.
@@ -153,9 +146,6 @@ When implementing changes:
 - Do not claim deployment succeeds unless the deployed service has been verified.
 
 ## 9. Testing Requirements
-
-Test at least the following:
-
 - Successful and unsuccessful login.
 - Access to protected endpoints without a token.
 - Role-based restrictions for Admin, Owner, and Viewer.
@@ -172,7 +162,6 @@ Test at least the following:
 
 
 ## 10. Deployment Requirements
-
 The project is maintained in GitHub and deployed on Render.
 
 - Preserve the existing repository structure.
@@ -185,9 +174,6 @@ The project is maintained in GitHub and deployed on Render.
 - Never commit production credentials or secrets.
 
 ## 11. Documentation
-
-Maintain the following project documentation:
-
 - `README.md`: project overview, setup, architecture, configuration, API, and deployment.
 - `THREATS.md`: security threats, mitigations, and evidence from tests.
 - `PROMPTS.md`: AI-assisted development history, incorrect suggestions, corrections, and verification.
@@ -195,7 +181,6 @@ Maintain the following project documentation:
 
 
 ## 12. Final Goal
-
 Deliver a functional, secure, maintainable document-management application that satisfies the original requirements.
 
 
