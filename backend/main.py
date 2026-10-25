@@ -270,7 +270,7 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
             detail="Invalid username or password"
         )
 
- token = jwt.encode(
+token = jwt.encode(
     {
         "sub": str(user.id),
         "role": user.role,
