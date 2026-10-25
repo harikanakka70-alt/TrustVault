@@ -169,7 +169,7 @@ Test at least the following:
 - Expired or invalid JWT tokens.
 - Frontend API connectivity and production configuration.
 
-Include both positive and negative tests. A security test should demonstrate that unauthorized access is rejected, not merely that an endpoint responds.
+
 
 ## 10. Deployment Requirements
 
@@ -192,12 +192,10 @@ Maintain the following project documentation:
 - `THREATS.md`: security threats, mitigations, and evidence from tests.
 - `PROMPTS.md`: AI-assisted development history, incorrect suggestions, corrections, and verification.
 
-Keep documentation accurate and distinguish implemented, tested, and pending features.
+
 
 ## 12. Final Goal
 
 Deliver a functional, secure, maintainable document-management application that satisfies the original requirements.
 
-Start by auditing the existing repository. Identify gaps, propose the smallest safe changes, implement them incrementally, run tests, and report the actual results.
 
-Do not replace the entire project simply to add features.
