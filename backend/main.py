@@ -270,15 +270,16 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
             detail="Invalid username or password"
         )
 
-    token = jwt.encode(
-        {
-            "sub": str(user.id),
-            "exp": datetime.now(timezone.utc)
-                   + timedelta(minutes=TOKEN_MINUTES)
-        },
-        SECRET_KEY,
-        algorithm=ALGORITHM
-    )
+ token = jwt.encode(
+    {
+        "sub": str(user.id),
+        "role": user.role,
+        "exp": datetime.now(timezone.utc)
+               + timedelta(minutes=TOKEN_MINUTES)
+    },
+    SECRET_KEY,
+    algorithm=ALGORITHM
+)   
 
     record_audit(db, user.id, "login", details="Successful login")
 
