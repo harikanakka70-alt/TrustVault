@@ -38,19 +38,18 @@ export async function apiRequest(path, options = {}, token = null) {
 }
 
 export async function login(username, password) {
-    const body = new URLSearchParams({ username, password })
-
     const result = await apiRequest('/login', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
+            'Content-Type': 'application/json',
         },
-        body,
-    })
+        body: JSON.stringify({ username, password }),
+    });
 
     if (!result.access_token) {
-        throw new Error('The server did not return an access token.')
+        throw new Error('The server did not return an access token.');
     }
 
-    return result
+    return result;
 }
+
