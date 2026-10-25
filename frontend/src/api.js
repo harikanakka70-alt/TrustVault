@@ -1,9 +1,8 @@
-
-const API_BASE_URL = 'http://localhost:8000'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://trustvault-backend-b3uo.onrender.com'
 
 export async function apiRequest(path, options = {}, token = null) {
     const headers = { ...options.headers }
-
+    
     if (token) {
         headers.Authorization = `Bearer ${token}`
     }
